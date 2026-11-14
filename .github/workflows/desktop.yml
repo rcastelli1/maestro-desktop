@@ -1,0 +1,25 @@
+name: Verificar desktop
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compilar e executar verificações
+        shell: pwsh
+        run: ./scripts/verify.ps1
+      - name: Verificar arquivos versionados
+        shell: pwsh
+        run: ./scripts/check-public-files.ps1

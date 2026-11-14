@@ -1,0 +1,31 @@
+# Arquivos gerados e dados locais do Maestro
+target/
+.tools/
+.local-data/
+.idea/
+*.iml
+*.log
+*.tmp
+*.apk
+*.aab
+
+# Configuração local e credenciais: nunca publicar
+.env
+.env.*
+!.env.example
+firebase/firestore.rules
+firebase/firestore.local.rules
+**/firebaseConfig.local.ts
+**/google-services.json
+**/*service-account*.json
+**/*adminsdk*.json
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.key
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
