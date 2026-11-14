@@ -48,12 +48,12 @@ As regras que escolhem destinatário, controlam fila, aprovam escrita e agendam 
 
 A cena JavaFX e as mutações do estado compartilhado são tratadas na thread da interface; Codex, plugins e consulta ao Firebase usam trabalhadores em segundo plano. A [documentação de concorrência JavaFX](https://docs.oracle.com/javase/8/javafx/interoperability-tutorial/concurrency.htm) recomenda manter operações demoradas fora da thread da interface. Novos casos de uso devem preservar essa regra e definir claramente quem pode alterar `WorkspaceData`.
 
-O estado atual ainda tem dois pontos de concentração: `AgentManagerApp.java` reúne telas e coordenação; `maestro-mobile/App.tsx` reúne a maioria das telas e estados React. A migração segura é incremental:
+O desktop ainda concentra telas e coordenação em `AgentManagerApp.java`. No mobile, `App.tsx` apenas monta os providers: as telas ficam em `src/screens/`, os elementos reutilizáveis em `src/components/`, os tipos em `src/types/` e o estado com as ações em `src/core/useMaestroController.ts`. Esse controlador ainda é grande; a migração segura é incremental:
 
 1. Extrair envio de mensagem, fila e execução de tarefas para casos de uso Java sem dependência de JavaFX.
 2. Separar modelos de domínio dos objetos de persistência e dos DTOs da API mobile.
 3. Introduzir interfaces pequenas para armazenamento, execução do Codex e entrega de eventos quando houver mais de uma implementação ou necessidade de teste isolado.
-4. Dividir `App.tsx` em telas, hooks e serviços de dados, preservando o contrato atual da API.
+4. Extrair de `useMaestroController.ts` os fluxos de conexão, sincronização, mensagens e notificações para hooks e serviços menores, preservando o contrato atual da API.
 5. Adicionar testes de contrato entre os dois repositórios antes de alterar campos ou rotas compartilhados.
 
 Um monorepo Expo também é suportado, mas [acrescenta configuração de workspaces](https://docs.expo.dev/guides/monorepos/). Como os projetos já estão em pastas separadas por preferência do usuário, dois repositórios com versões e documentação coordenadas são a escolha atual.
