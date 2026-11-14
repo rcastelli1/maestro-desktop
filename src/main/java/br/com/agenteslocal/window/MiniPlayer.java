@@ -37,14 +37,21 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** The supplied 520 × 92 capsule, adapted to show real Maestro tasks. */
+/** Compact floating control for the current Maestro task. */
 public final class MiniPlayer {
+    private static final double CAPSULE_WIDTH = 400;
+    private static final double CAPSULE_HEIGHT = 76;
+    private static final double WINDOW_WIDTH = 430;
+    private static final double WINDOW_HEIGHT = 106;
+    private static final double AVATAR_SIZE = 60;
+    private static final double ACTION_SIZE = 44;
+
     public record Entry(String agentId, String visualId, String color, String eyeColor,
                         AgentAnimations animations, String name, String activity,
                         String taskId, boolean running, boolean resumable) { }
 
     private final Stage window = new Stage(StageStyle.TRANSPARENT);
-    private final HBox capsule = new HBox(16);
+    private final HBox capsule = new HBox(10);
     private final StackPane portrait = new StackPane();
     private final StackPane info = new StackPane();
     private final HBox markers = new HBox(4);
@@ -54,7 +61,7 @@ public final class MiniPlayer {
     private final Label status = new Label();
     private final Label activity = new Label();
     private final HBox typingDots = new HBox(3);
-    private final Circle ring = new Circle(28, Color.TRANSPARENT);
+    private final Circle ring = new Circle(ACTION_SIZE / 2, Color.TRANSPARENT);
     private final Button action = new Button();
     private final Timeline rotation;
     private final Timeline ringPulse;
@@ -88,25 +95,25 @@ public final class MiniPlayer {
         window.setAlwaysOnTop(true);
         window.setResizable(false);
         // Transparent space around the pill keeps the reference's soft drop shadow visible.
-        window.setWidth(560);
-        window.setHeight(132);
+        window.setWidth(WINDOW_WIDTH);
+        window.setHeight(WINDOW_HEIGHT);
 
-        portrait.setMinSize(76, 76);
-        portrait.setPrefSize(76, 76);
-        portrait.setMaxSize(76, 76);
+        portrait.setMinSize(AVATAR_SIZE, AVATAR_SIZE);
+        portrait.setPrefSize(AVATAR_SIZE, AVATAR_SIZE);
+        portrait.setMaxSize(AVATAR_SIZE, AVATAR_SIZE);
 
         status.getStyleClass().add("mini-status");
         status.setTextOverrun(OverrunStyle.ELLIPSIS);
-        status.setMaxWidth(235);
+        status.setMaxWidth(175);
         activity.getStyleClass().add("mini-activity");
         activity.setTextOverrun(OverrunStyle.ELLIPSIS);
         activity.setMinWidth(0);
-        activity.setMaxWidth(265);
+        activity.setMaxWidth(220);
         statusLine.getChildren().addAll(liveDot, status);
         statusLine.setAlignment(Pos.CENTER_LEFT);
         activityLine.getChildren().addAll(activity, typingDots);
         activityLine.setAlignment(Pos.CENTER_LEFT);
-        VBox lines = new VBox(6, statusLine, activityLine);
+        VBox lines = new VBox(4, statusLine, activityLine);
         lines.setAlignment(Pos.CENTER_LEFT);
         lines.setMaxWidth(Double.MAX_VALUE);
         info.getChildren().addAll(lines, markers);
@@ -116,7 +123,7 @@ public final class MiniPlayer {
         markers.setMaxWidth(Region.USE_PREF_SIZE);
         markers.setAlignment(Pos.CENTER_RIGHT);
         StackPane.setAlignment(markers, Pos.TOP_RIGHT);
-        StackPane.setMargin(markers, new Insets(7, 0, 0, 0));
+        StackPane.setMargin(markers, new Insets(5, 0, 0, 0));
 
         for (int i = 0; i < 3; i++) {
             Circle dot = new Circle(2, Color.web("#A8A8A8"));
@@ -152,9 +159,9 @@ public final class MiniPlayer {
         livePulse.setCycleCount(Animation.INDEFINITE);
 
         action.getStyleClass().add("mini-action");
-        action.setMinSize(56, 56);
-        action.setPrefSize(56, 56);
-        action.setMaxSize(56, 56);
+        action.setMinSize(ACTION_SIZE, ACTION_SIZE);
+        action.setPrefSize(ACTION_SIZE, ACTION_SIZE);
+        action.setMaxSize(ACTION_SIZE, ACTION_SIZE);
         action.setFocusTraversable(false);
         action.setOnAction(event -> {
             if (selected != null && selected.running() && !selected.taskId().isBlank()) stopTask.accept(selected);
@@ -166,16 +173,16 @@ public final class MiniPlayer {
         action.setOnMousePressed(event -> scaleButton(.93));
         action.setOnMouseReleased(event -> scaleButton(action.isHover() ? 1.07 : 1));
         StackPane actionWrap = new StackPane(ring, action);
-        actionWrap.setMinSize(56, 56);
-        actionWrap.setPrefSize(56, 56);
-        actionWrap.setMaxSize(56, 56);
+        actionWrap.setMinSize(ACTION_SIZE, ACTION_SIZE);
+        actionWrap.setPrefSize(ACTION_SIZE, ACTION_SIZE);
+        actionWrap.setMaxSize(ACTION_SIZE, ACTION_SIZE);
 
         capsule.getChildren().addAll(portrait, info, actionWrap);
         capsule.setAlignment(Pos.CENTER_LEFT);
-        capsule.setPadding(new Insets(0, 18, 0, 14));
-        capsule.setMinSize(520, 92);
-        capsule.setPrefSize(520, 92);
-        capsule.setMaxSize(520, 92);
+        capsule.setPadding(new Insets(0, 14, 0, 12));
+        capsule.setMinSize(CAPSULE_WIDTH, CAPSULE_HEIGHT);
+        capsule.setPrefSize(CAPSULE_WIDTH, CAPSULE_HEIGHT);
+        capsule.setMaxSize(CAPSULE_WIDTH, CAPSULE_HEIGHT);
         capsule.getStyleClass().add("mini-capsule");
         capsule.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && !action.isHover()) openMain.run();
@@ -193,7 +200,7 @@ public final class MiniPlayer {
 
         StackPane canvas = new StackPane(capsule);
         canvas.setStyle("-fx-background-color: transparent;");
-        Scene scene = new Scene(canvas, 560, 132, Color.TRANSPARENT);
+        Scene scene = new Scene(canvas, WINDOW_WIDTH, WINDOW_HEIGHT, Color.TRANSPARENT);
         scene.getStylesheets().add(stylesheet);
         window.setScene(scene);
 
@@ -294,7 +301,7 @@ public final class MiniPlayer {
                 + selected.animations().computer;
         if (!shownKey.equals(key)) {
             shownKey = key;
-            portrait.getChildren().setAll(new AgentCharacterView(selected.visualId(), 76,
+            portrait.getChildren().setAll(new AgentCharacterView(selected.visualId(), AVATAR_SIZE,
                     animationsEnabled.get(), !active, selected.color(), selected.eyeColor(), active,
                     selected.animations()));
             if (window.isShowing() && animationsEnabled.get()) animatePortraitAndText();
@@ -357,12 +364,12 @@ public final class MiniPlayer {
 
     private void entrance() {
         capsule.setOpacity(0);
-        capsule.setTranslateY(28);
+        capsule.setTranslateY(20);
         capsule.setScaleX(.92);
         capsule.setScaleY(.92);
         Timeline entrance = new Timeline(
                 new KeyFrame(Duration.ZERO, new KeyValue(capsule.opacityProperty(), 0),
-                        new KeyValue(capsule.translateYProperty(), 28),
+                        new KeyValue(capsule.translateYProperty(), 20),
                         new KeyValue(capsule.scaleXProperty(), .92), new KeyValue(capsule.scaleYProperty(), .92)),
                 new KeyFrame(Duration.millis(560), eased(capsule.opacityProperty(), 1),
                         eased(capsule.translateYProperty(), -2),
@@ -406,15 +413,15 @@ public final class MiniPlayer {
     }
 
     private static Rectangle stopGraphic() {
-        Rectangle square = new Rectangle(20, 20, Color.BLACK);
-        square.setArcWidth(10);
-        square.setArcHeight(10);
+        Rectangle square = new Rectangle(16, 16, Color.BLACK);
+        square.setArcWidth(8);
+        square.setArcHeight(8);
         return square;
     }
 
     private static SVGPath playGraphic() {
         SVGPath triangle = new SVGPath();
-        triangle.setContent("M8 5 L20 12 L8 19 Z");
+        triangle.setContent("M7 5 L18 12 L7 19 Z");
         triangle.setFill(Color.BLACK);
         triangle.setStroke(Color.BLACK);
         triangle.setStrokeWidth(2);
