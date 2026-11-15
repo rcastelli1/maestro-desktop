@@ -32,10 +32,12 @@ public final class PushNotificationService implements AutoCloseable {
     private static final URI SEND_URL = URI.create("https://exp.host/--/api/v2/push/send");
     private static final URI RECEIPTS_URL = URI.create("https://exp.host/--/api/v2/push/getReceipts");
     private static final int MAX_DEVICES = 8;
+    private static final String AGENT_CHANNEL = "agent-messages-sound-v1";
+    private static final String COMPLETION_CHANNEL = "agent-completions-sound-v1";
     private final Path devicesFile;
     private final Set<String> devices = new LinkedHashSet<>();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
-    private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor(task -> {
+    private final ScheduledExecutorService worker = Executors.newScheduledThreadPool(3, task -> {
         Thread thread = new Thread(task, "maestro-push-notifications");
         thread.setDaemon(true);
         return thread;
@@ -70,9 +72,11 @@ public final class PushNotificationService implements AutoCloseable {
 
     public synchronized int deviceCount() { return devices.size(); }
 
-    public void message(Project project, ChatThread chat, Agent agent, ChatMessage message) {
+    public void message(Project project, ChatThread chat, Agent agent, ChatMessage message,
+                        boolean completed) {
         if (project == null || chat == null || agent == null || message == null
-                || !"agent".equals(message.kind)) return;
+                || !("agent".equals(message.kind) || "progress".equals(message.kind)
+                || "approval".equals(message.kind))) return;
         List<String> targets;
         synchronized (this) { targets = new ArrayList<>(devices); }
         if (targets.isEmpty()) return;
@@ -85,7 +89,8 @@ public final class PushNotificationService implements AutoCloseable {
         data.addProperty("title", agent.name);
         data.addProperty("message", preview);
         data.addProperty("maestroPush", "1");
-        data.addProperty("channelId", "agent-messages");
+        data.addProperty("channelId", completed ? COMPLETION_CHANNEL : AGENT_CHANNEL);
+        data.addProperty("sound", completed ? "agent_complete.mp3" : "agent_message.mp3");
         data.addProperty("projectId", project.id);
         data.addProperty("chatId", chat.id);
         data.addProperty("agentId", agent.id);

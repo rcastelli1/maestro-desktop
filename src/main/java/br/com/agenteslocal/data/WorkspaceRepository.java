@@ -21,9 +21,15 @@ public final class WorkspaceRepository {
 
     public WorkspaceRepository() {
         String override = System.getenv("AGENTES_LOCAL_HOME");
-        home = override == null || override.isBlank()
+        Path selectedHome = override == null || override.isBlank()
                 ? Path.of(System.getProperty("user.home"), ".agentes-local")
                 : Path.of(override);
+        home = selectedHome;
+        dataFile = home.resolve("workspace.json");
+    }
+
+    WorkspaceRepository(Path home) {
+        this.home = home;
         dataFile = home.resolve("workspace.json");
     }
 
@@ -96,20 +102,25 @@ public final class WorkspaceRepository {
         return home;
     }
 
-    public void exportBackup(Path destination) throws IOException {
+    public void exportBackup(Path destination, char[] password) throws IOException {
         Path output = destination.toAbsolutePath().normalize();
-        if (output.getParent() != null) Files.createDirectories(output.getParent());
-        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(output));
-             var files = Files.walk(home)) {
-            for (Path file : files.filter(Files::isRegularFile).toList()) {
-                if (file.toAbsolutePath().normalize().equals(output)) continue;
-                String name = home.relativize(file).toString().replace('\\', '/');
-                if (name.endsWith(".tmp")) continue;
-                if (name.equals("mobile-access-token")) continue;
-                zip.putNextEntry(new ZipEntry(name));
-                Files.copy(file, zip);
-                zip.closeEntry();
+        BackupCrypto.encrypt(output, password, encrypted -> {
+            ZipOutputStream zip = new ZipOutputStream(encrypted);
+            try (var files = Files.walk(home)) {
+                for (Path file : files.filter(Files::isRegularFile).toList()) {
+                    if (Files.isSymbolicLink(file) || file.toAbsolutePath().normalize().equals(output)) continue;
+                    String name = home.relativize(file).toString().replace('\\', '/');
+                    // Only project data is portable. Never export pairing keys, Firebase sessions,
+                    // notification tokens, local access tokens, or in-flight request markers.
+                    if (!name.equals("workspace.json") && !name.startsWith("projects/")) continue;
+                    if (name.endsWith(".tmp")) continue;
+                    zip.putNextEntry(new ZipEntry(name));
+                    Files.copy(file, zip);
+                    zip.closeEntry();
+                }
+                zip.finish();
+                zip.flush();
             }
-        }
+        });
     }
 }

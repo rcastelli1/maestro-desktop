@@ -1,6 +1,7 @@
 package br.com.agenteslocal;
 
 import br.com.agenteslocal.application.ScheduledMessageService;
+import br.com.agenteslocal.audio.AgentMessageSound;
 import br.com.agenteslocal.codex.CodexService;
 import br.com.agenteslocal.character.AgentCharacterView;
 import br.com.agenteslocal.chat.ChatMentionMenu;
@@ -13,6 +14,7 @@ import br.com.agenteslocal.codex.AgentHandoff;
 import br.com.agenteslocal.codex.PluginService;
 import br.com.agenteslocal.codex.SharedProjectContext;
 import br.com.agenteslocal.data.WorkspaceRepository;
+import br.com.agenteslocal.data.BackupCrypto;
 import br.com.agenteslocal.git.GitService;
 import br.com.agenteslocal.git.DiffParser;
 import br.com.agenteslocal.knowledge.KnowledgeService;
@@ -36,6 +38,7 @@ import br.com.agenteslocal.mobile.FirebaseRemoteClient;
 import br.com.agenteslocal.mobile.FirebaseRemoteSettings;
 import br.com.agenteslocal.terminal.TerminalSession;
 import br.com.agenteslocal.window.WindowsTitleBar;
+import br.com.agenteslocal.window.WindowsVoiceTyping;
 import br.com.agenteslocal.window.MiniPlayer;
 import br.com.agenteslocal.window.UiIcons;
 import com.google.gson.JsonArray;
@@ -186,6 +189,7 @@ public final class AgentManagerApp extends Application {
     private String mobileBridgeError = "";
     private MobileApi mobileApi;
     private PushNotificationService pushNotifications;
+    private final AgentMessageSound agentMessageSound = new AgentMessageSound();
     private FirebaseRemoteSettings remoteSettings;
     private FirebaseRemoteBridge remoteBridge;
     private String remoteBridgeError = "";
@@ -349,6 +353,7 @@ public final class AgentManagerApp extends Application {
         if (mobileBridge != null) mobileBridge.close();
         if (remoteBridge != null) remoteBridge.close();
         if (pushNotifications != null) pushNotifications.close();
+        agentMessageSound.stop();
         if (miniPlayer != null) miniPlayer.close();
         terminalsByProject.values().forEach(sessions -> sessions.forEach(TerminalSession::close));
         workers.shutdownNow();
@@ -1238,7 +1243,13 @@ public final class AgentManagerApp extends Application {
         Button send = button("→", "chat-send", () -> sendChat(project, selectedChatAgent(project), input.getText()));
         Button schedule = button("◷", "chat-attach chat-schedule", () -> showScheduledDialog(project, chat, input.getText()));
         schedule.setTooltip(new Tooltip("Agendar envio desta mensagem"));
-        HBox composerBar = row(14, attach, input, schedule, send);
+        Button microphone = new Button();
+        microphone.setGraphic(UiIcons.icon("mic", 20));
+        microphone.getStyleClass().add("chat-attach");
+        microphone.setTooltip(new Tooltip("Ditar mensagem com o microfone do Windows (Windows + H)"));
+        microphone.setOnAction(event -> WindowsVoiceTyping.open(input,
+                reason -> alert("Transcrição por voz", reason)));
+        HBox composerBar = row(14, attach, input, schedule, microphone, send);
         composerBar.getStyleClass().add("chat-composer");
         composerBar.setMaxWidth(760);
         HBox.setHgrow(input, Priority.ALWAYS);
@@ -2367,7 +2378,8 @@ public final class AgentManagerApp extends Application {
             approval.detail = "Esta tarefa poderá alterar arquivos dentro da pasta do projeto: " + task.title;
             approval.actionPreview = project.folder;
             project.approvals.add(approval);
-            chat.messages.add(ChatMessage.of("approval", approval.id, recipient.name, approval.title));
+            addAgentMessage(project, chat, recipient,
+                    ChatMessage.of("approval", approval.id, recipient.name, approval.title));
         } else {
             startTask(project, recipient, task, files);
         }
@@ -2375,6 +2387,18 @@ public final class AgentManagerApp extends Application {
         if (!mobile || (screen.equals("chat") && data.activeProjectId.equals(project.id)
                 && project.activeChatId.equals(chat.id))) show("chat");
         return true;
+    }
+
+    private void addAgentMessage(Project project, ChatThread chat, Agent agent, ChatMessage message) {
+        addAgentMessage(project, chat, agent, message, false);
+    }
+
+    private void addAgentMessage(Project project, ChatThread chat, Agent agent, ChatMessage message,
+                                 boolean completed) {
+        chat.messages.add(message);
+        if (completed) agentMessageSound.playCompletion();
+        else agentMessageSound.playMessage();
+        if (pushNotifications != null) pushNotifications.message(project, chat, agent, message, completed);
     }
 
     private void delegateAgentMessage(Project project, ChatThread chat, ChatMessage source, boolean automatic) {
@@ -2477,7 +2501,8 @@ public final class AgentManagerApp extends Application {
                     : "Tarefa encaminhada por outro agente: " + task.title;
             approval.actionPreview = project.folder;
             project.approvals.add(approval);
-            chat.messages.add(ChatMessage.of("approval", approval.id, agent.name, approval.title));
+            addAgentMessage(project, chat, agent,
+                    ChatMessage.of("approval", approval.id, agent.name, approval.title));
             return;
         }
         startTask(project, agent, task, task.attachments == null ? List.of() : task.attachments);
@@ -2668,7 +2693,7 @@ public final class AgentManagerApp extends Application {
                             ChatMessage update = ChatMessage.of("progress", agent.id, agent.name, event.text());
                             update.taskId = task.id;
                             update.progressType = event.kind().equals("note") ? "note" : "activity";
-                            chat.messages.add(update);
+                            addAgentMessage(project, chat, agent, update);
                             List<ChatMessage> previous = chat.messages.stream()
                                     .filter(message -> message.kind.equals("progress") && task.id.equals(message.taskId))
                                     .toList();
@@ -2682,9 +2707,7 @@ public final class AgentManagerApp extends Application {
                             if (question == null) {
                                 ChatMessage answer = ChatMessage.of("agent", agent.id, agent.name, event.text());
                                 answer.taskId = task.id;
-                                chat.messages.add(answer);
-                                if (pushNotifications != null)
-                                    pushNotifications.message(project, chat, agent, answer);
+                                addAgentMessage(project, chat, agent, answer, true);
                                 delegateAgentMessage(project, chat, answer, true);
                                 startNextQueuedTask(project, agent);
                             } else {
@@ -2692,9 +2715,7 @@ public final class AgentManagerApp extends Application {
                                     ChatMessage preface = ChatMessage.of("agent", agent.id, agent.name,
                                             question.preface());
                                     preface.taskId = task.id;
-                                    chat.messages.add(preface);
-                                    if (pushNotifications != null)
-                                        pushNotifications.message(project, chat, agent, preface);
+                                    addAgentMessage(project, chat, agent, preface);
                                 }
                                 Approval request = new Approval();
                                 request.kind = "question";
@@ -2705,7 +2726,8 @@ public final class AgentManagerApp extends Application {
                                 request.recommendedChoice = question.recommended();
                                 request.selectedChoice = question.recommended();
                                 project.approvals.add(request);
-                                chat.messages.add(ChatMessage.of("approval", request.id, agent.name, request.title));
+                                addAgentMessage(project, chat, agent,
+                                        ChatMessage.of("approval", request.id, agent.name, request.title));
                             }
                         }
                         case "error" -> {
@@ -5343,7 +5365,7 @@ public final class AgentManagerApp extends Application {
                 label("Os dados do aplicativo ficam locais. O texto enviado aos agentes é processado pelo Codex conforme a conta conectada.", "tiny-muted"),
                 row(8, button("Exportar dados", "outline-button", this::exportData),
                         button("Apagar histórico do projeto", "danger-button", () -> clearHistory(project))),
-                label("O backup inclui dados e arquivos do aplicativo. Sessões próprias do Codex CLI ficam fora dele.", "tiny-muted"));
+                label("O backup é protegido por senha e inclui projetos, conversas e arquivos. Chaves de pareamento, login do Firebase e tokens do celular ficam fora dele.", "tiny-muted"));
         return box;
     }
 
@@ -5352,26 +5374,113 @@ public final class AgentManagerApp extends Application {
         box.getChildren().addAll(label("Armazenamento", "section-title"),
                 label(repository.home().toString(), "muted"),
                 label("Projetos, conversas, anexos e índice de conhecimento são guardados nesta pasta.", "tiny-muted"),
-                button("Exportar backup ZIP", "outline-button", this::exportData));
+                row(8, button("Exportar backup protegido", "outline-button", this::exportData),
+                        button("Proteger ZIP antigo", "outline-button", this::protectExistingBackup)),
+                button("Abrir backup protegido", "outline-button", this::openProtectedBackup),
+                label("Guarde a senha: sem ela não é possível abrir o backup. Proteger um ZIP antigo não apaga o original.", "tiny-muted"));
         return box;
     }
 
     private void exportData() {
         save();
+        char[] password = backupPassword("Senha para o novo backup", true);
+        if (password == null) return;
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Exportar dados do maestro");
-        chooser.setInitialFileName("maestro-backup.zip");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo ZIP", "*.zip"));
+        chooser.setTitle("Exportar backup protegido do maestro");
+        chooser.setInitialFileName("maestro-backup.maestrobackup");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Backup protegido do Maestro", "*.maestrobackup"));
         java.io.File destination = chooser.showSaveDialog(stage);
-        if (destination == null) return;
+        if (destination == null) { java.util.Arrays.fill(password, '\0'); return; }
         workers.submit(() -> {
             try {
-                repository.exportBackup(destination.toPath());
-                Platform.runLater(() -> alert("Backup", "Dados exportados para " + destination.getAbsolutePath()));
+                repository.exportBackup(destination.toPath(), password);
+                Platform.runLater(() -> alert("Backup", "Backup protegido salvo em " + destination.getAbsolutePath()));
             } catch (IOException e) {
                 Platform.runLater(() -> alert("Backup", "Não foi possível exportar: " + e.getMessage()));
+            } finally { java.util.Arrays.fill(password, '\0'); }
+        });
+    }
+
+    private void protectExistingBackup() {
+        FileChooser sourceChooser = new FileChooser();
+        sourceChooser.setTitle("Selecione o ZIP antigo");
+        sourceChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Backup ZIP antigo", "*.zip"));
+        java.io.File source = sourceChooser.showOpenDialog(stage);
+        if (source == null) return;
+        char[] password = backupPassword("Senha para proteger o ZIP antigo", true);
+        if (password == null) return;
+        FileChooser destinationChooser = new FileChooser();
+        destinationChooser.setTitle("Salvar cópia protegida");
+        destinationChooser.setInitialFileName(source.getName().replaceFirst("(?i)\\.zip$", "") + ".maestrobackup");
+        destinationChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Backup protegido do Maestro", "*.maestrobackup"));
+        java.io.File destination = destinationChooser.showSaveDialog(stage);
+        if (destination == null) { java.util.Arrays.fill(password, '\0'); return; }
+        workers.submit(() -> {
+            try {
+                BackupCrypto.protectZip(source.toPath(), destination.toPath(), password);
+                Platform.runLater(() -> alert("Backup protegido", "Cópia protegida salva em " + destination.getAbsolutePath()
+                        + "\n\nO ZIP antigo continua no lugar. Depois de confirmar a cópia, remova o ZIP antigo e outras cópias sem senha."));
+            } catch (IOException error) {
+                Platform.runLater(() -> alert("Backup", "Não foi possível proteger o ZIP: " + error.getMessage()));
+            } finally { java.util.Arrays.fill(password, '\0'); }
+        });
+    }
+
+    private void openProtectedBackup() {
+        FileChooser sourceChooser = new FileChooser();
+        sourceChooser.setTitle("Selecione o backup protegido");
+        sourceChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Backup protegido do Maestro", "*.maestrobackup"));
+        java.io.File source = sourceChooser.showOpenDialog(stage);
+        if (source == null) return;
+        char[] password = backupPassword("Senha para abrir o backup", false);
+        if (password == null) return;
+        FileChooser destinationChooser = new FileChooser();
+        destinationChooser.setTitle("Salvar ZIP aberto");
+        destinationChooser.setInitialFileName(source.getName().replaceFirst("(?i)\\.maestrobackup$", "") + ".zip");
+        destinationChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo ZIP", "*.zip"));
+        java.io.File destination = destinationChooser.showSaveDialog(stage);
+        if (destination == null) { java.util.Arrays.fill(password, '\0'); return; }
+        workers.submit(() -> {
+            try {
+                BackupCrypto.openZip(source.toPath(), destination.toPath(), password);
+                Platform.runLater(() -> alert("Backup aberto", "ZIP salvo em " + destination.getAbsolutePath()
+                        + "\n\nEsse ZIP contém dados privados sem criptografia. Remova-o depois de usar."));
+            } catch (IOException error) {
+                Platform.runLater(() -> alert("Backup", "Não foi possível abrir: " + error.getMessage()));
+            } finally { java.util.Arrays.fill(password, '\0'); }
+        });
+    }
+
+    private char[] backupPassword(String title, boolean repeat) {
+        Dialog<ButtonType> prompt = dialog(title);
+        PasswordField password = new PasswordField();
+        password.setPromptText("Pelo menos 12 caracteres");
+        password.getStyleClass().add("input-field");
+        PasswordField confirmation = new PasswordField();
+        confirmation.setPromptText("Repita a senha");
+        confirmation.getStyleClass().add("input-field");
+        Label validation = label("", "tiny-muted");
+        VBox content = new VBox(10, label("Senha do backup", "row-title"), password);
+        if (repeat) content.getChildren().addAll(label("Confirmar senha", "row-title"), confirmation);
+        content.getChildren().addAll(label("Guarde esta senha em um lugar seguro. Ela não é salva pelo Maestro.", "tiny-muted"), validation);
+        content.setPadding(new Insets(12));
+        prompt.getDialogPane().setContent(content);
+        Button proceed = (Button) prompt.getDialogPane().lookupButton(prompt.getDialogPane().getButtonTypes().get(1));
+        proceed.setText("Continuar");
+        proceed.addEventFilter(ActionEvent.ACTION, event -> {
+            if (password.getText().length() < 12) {
+                validation.setText("Use pelo menos 12 caracteres.");
+                event.consume();
+            } else if (repeat && !password.getText().equals(confirmation.getText())) {
+                validation.setText("As senhas digitadas são diferentes.");
+                event.consume();
             }
         });
+        if (prompt.showAndWait().filter(button -> button.getButtonData() == ButtonBar.ButtonData.OK_DONE).isEmpty()) return null;
+        char[] secret = password.getText().toCharArray();
+        password.clear();
+        confirmation.clear();
+        return secret;
     }
 
     private void clearHistory(Project project) {

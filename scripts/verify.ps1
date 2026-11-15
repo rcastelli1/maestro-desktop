@@ -16,7 +16,8 @@ $java = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin/java.exe' } else { '
 $checks = @(
     'br.com.agenteslocal.mobile.QueuedMessagesCheck',
     'br.com.agenteslocal.mobile.ScheduledMessageCheck',
-    'br.com.agenteslocal.mobile.FirebaseRemoteSettingsCheck'
+    'br.com.agenteslocal.mobile.FirebaseRemoteSettingsCheck',
+    'br.com.agenteslocal.data.BackupSecurityCheck'
 )
 
 foreach ($check in $checks) {
@@ -25,4 +26,4 @@ foreach ($check in $checks) {
     if ($LASTEXITCODE -ne 0) { throw "Verificação falhou: $check" }
 }
 Remove-Item Env:AGENTES_LOCAL_HOME -ErrorAction SilentlyContinue
-Write-Host 'Compilação e verificações de fila/agendamento: OK'
+Write-Host 'Compilação e verificações de fila, agendamento e backup: OK'

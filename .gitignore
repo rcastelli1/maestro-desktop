@@ -8,6 +8,8 @@ target/
 *.tmp
 *.apk
 *.aab
+*.zip
+*.maestrobackup
 
 # Configuração local e credenciais: nunca publicar
 .env
@@ -19,6 +21,11 @@ firebase/firestore.local.rules
 **/google-services.json
 **/*service-account*.json
 **/*adminsdk*.json
+**/firebase-remote.json
+**/push-devices.json
+**/mobile-access-token
+**/workspace.json
+**/remote-inflight/
 *.jks
 *.keystore
 *.p8
