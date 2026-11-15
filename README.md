@@ -1,41 +1,107 @@
 # Maestro
 
-Gerenciador local de agentes de IA por projeto. O aplicativo para Windows executa tarefas com o Codex CLI; o aplicativo para celular acompanha conversas e envia comandos ao computador pela rede local ou por uma ponte remota cifrada.
+**Um lugar para organizar agentes de IA e acompanhar o trabalho deles em projetos reais.** O Maestro reúne conversas, tarefas, arquivos, conhecimento e ferramentas em uma interface de chat. Você escolhe a pasta do projeto, cria agentes com funções próprias e acompanha o que cada um está fazendo. O trabalho com IA é executado no seu computador pelo Codex CLI.
 
-## Projetos de código
+O aplicativo desktop foi desenvolvido para **Windows**. O aplicativo mobile foi desenvolvido para **Android** e permite conversar com os agentes, acompanhar as tarefas e aprovar ações pelo celular, inclusive fora de casa. O suporte a **Linux, macOS e iPhone** está nos planos futuros.
 
-| Projeto | Pasta local | Tecnologia |
-| --- | --- | --- |
-| Desktop e API embutida | `terminal-agentes/` (este repositório) | Java 21, JavaFX, Maven |
-| Celular | `maestro-mobile/` (pasta irmã e repositório separado) | React Native, Expo SDK 57, TypeScript |
+O desktop deste repositório usa **Java 21, JavaFX e Maven**. O projeto Android, mantido separadamente na pasta irmã `maestro-mobile/`, usa **React Native, Expo SDK 57 e TypeScript**.
 
-O mobile foi mantido na pasta separada solicitada para ele. Os dois projetos devem ser versionados juntos quando uma mudança alterar o contrato da API.
+## Funcionalidades atuais
 
-## Começar
+### Projetos, agentes e conversas
 
-1. Instale um JDK 21. Para desenvolver no Windows, execute `run.cmd`. O Maven Wrapper baixa as dependências na primeira execução.
-2. Instale e autentique o Codex CLI. No Maestro, selecione uma pasta de projeto e configure o executável do Codex se ele não for encontrado automaticamente.
-3. Para criar a distribuição Windows com runtime Java, execute `package.cmd`. A saída fica em `target/dist/Maestro-*/Maestro`.
-4. Para desenvolver o app do celular, abra a pasta irmã `maestro-mobile/`, instale as dependências com `npm ci` e execute `npm run dev:tunnel` quando o Expo Go não alcançar a rede local.
+- **Projetos:** crie espaços separados, associe cada um a uma pasta no computador e acompanhe a atividade na visão geral.
+- **Agentes personalizados:** crie, edite e exclua agentes; defina nome, função, instruções, modelo, acesso ao conhecimento e permissão para editar arquivos. Escolha também personagem, cores e animações.
+- **Chats em grupo:** mantenha várias conversas por projeto. Use `@` para escolher um agente; a lista de menções filtra os nomes enquanto você digita. Os agentes recebem o contexto recente da conversa em que trabalham.
+- **Chats individuais:** converse com um agente sem acionar os outros. Cada conversa individual mantém seu próprio histórico e sua sessão do Codex.
+- **Mensagens e anexos:** envie texto e arquivos, cole capturas de tela com `Ctrl+V`, visualize imagens no chat, copie mensagens e responda citando uma mensagem anterior.
+- **Encaminhamento entre agentes:** um agente pode passar etapas a outros agentes mencionados em sua resposta. O Maestro preserva o contexto da tarefa e inicia as etapas em sequência.
+- **Fila compartilhada:** mensagens enviadas enquanto um agente está ocupado entram em uma fila do projeto. Você pode mudar a prioridade, editar ou apagar suas mensagens ainda não iniciadas. Envios do Windows e do Android usam a mesma fila.
+- **Mensagens agendadas:** programe texto e anexos para uma data e hora, para o próximo reset de 5 horas ou para o reset semanal do Codex. Agendamentos vencidos são processados quando o Maestro volta a abrir.
+- **Transcrição de voz:** dite uma mensagem pelo microfone no Windows ou no Android, veja o texto aparecer no campo e revise antes de enviar.
 
-O computador precisa estar ligado e com o Maestro aberto para que os agentes trabalhem e para que o celular receba respostas.
+### Trabalho no projeto
 
-Mensagens de progresso e pedidos de aprovação tocam `src/main/resources/sounds/agent_message.mp3`. Quando o agente conclui sua tarefa, toca `src/main/resources/sounds/agent_complete.mp3`, inclusive se o trabalho passar a outro agente. No Android, as notificações usam esses mesmos sons; gere e instale um novo APK para adicioná-los ao aplicativo.
+- **Tarefas e aprovações:** acompanhe andamento, mensagens de progresso e pedidos de decisão. Interrompa uma tarefa, pause a fila do agente ou passe para a próxima tarefa.
+- **Permissões de arquivos:** configure a escrita como **Permitir**, **Aprovar** ou **Bloquear**. A opção **Aprovar** pede sua confirmação antes de iniciar uma tarefa que pode alterar arquivos; as restrições efetivas também são aplicadas pelo Codex CLI.
+- **Arquivos e Git:** explore arquivos, examine alterações e diffs, prepare ou reverta mudanças e faça commits pelo desktop.
+- **Terminais integrados:** abra várias abas de terminal, iniciadas na pasta do projeto selecionado.
+- **Base de conhecimento (RAG):** importe arquivos e pastas, indexe o texto localmente, pesquise trechos e escolha quais agentes podem consultá-los. A busca atual é textual; PDFs digitalizados precisam de OCR externo.
+- **MCPs e plugins:** configure servidores MCP por projeto e gerencie plugins do Codex CLI instalados no computador.
+- **Modelos e uso do Codex:** escolha o modelo GPT e o nível de raciocínio de cada agente, confira a conexão do Codex e acompanhe os limites de uso, horários de reset e créditos de reset quando essas informações estiverem disponíveis.
 
-No chat do Windows, clique no microfone para abrir a digitação por voz do sistema com o campo de mensagem em foco. Fale e revise o texto antes de enviá-lo. O Windows precisa de microfone, internet e reconhecimento de fala online habilitado. A digitação usa o idioma de entrada selecionado no Windows.
+### Interface e celular
+
+- **Personagens animados:** os agentes aparecem nos cartões, nas tarefas e no chat. O mini player do Windows acompanha a atividade quando a janela perde o foco.
+- **Notificações:** o Android pode avisar sobre mensagens dos agentes com nome, prévia, imagem do agente e sons de andamento ou conclusão. As notificações exigem um APK instalado e a configuração de push descrita no projeto mobile.
+- **Acesso remoto:** pelo Android, você pode abrir os projetos, conversar em grupo ou individualmente, enviar anexos, acompanhar tarefas e responder a aprovações. O computador continua executando os agentes.
+- **Dados e backups:** os projetos e o histórico ficam no computador. O Maestro também oferece exportação de backup protegido por senha.
+
+## Como o celular se conecta
+
+Para usar o Maestro **de qualquer lugar**, você configura **seu próprio projeto Firebase**. O celular envia os pedidos por uma ponte remota; o Maestro aberto no computador recebe esses pedidos, executa o trabalho e devolve as atualizações. O conteúdo trocado por essa ponte é cifrado antes de ir ao Firestore. A conta Firebase e a chave remota do Maestro são necessárias para conectar o celular. Não é preciso abrir uma porta no roteador.
+
+As notificações push são uma parte separada: suas prévias passam pelos serviços de notificação da Expo e do Google.
+
+O **computador precisa estar ligado, com o Maestro aberto e conectado à internet** para que os agentes trabalhem e o celular receba as respostas. Se você quiser usar apenas o aplicativo de Windows, **não precisa de Firebase**.
+
+Também existe um modo de conexão pela rede local. Ele usa HTTP e uma chave de acesso, portanto deve ser usado somente em uma rede em que você confie. Para acesso fora da rede local, use a opção **De qualquer lugar** com Firebase.
+
+## Requisitos
+
+| Uso | Requisitos |
+| --- | --- |
+| Desktop a partir do código | Windows, JDK 21, internet para baixar dependências na primeira execução e Codex CLI instalado e autenticado. O repositório inclui o Maven Wrapper. |
+| Desktop empacotado | Windows e Codex CLI instalado e autenticado. A distribuição gerada por `package.cmd` inclui o runtime Java. |
+| Android | Aparelho Android, código do projeto `maestro-mobile`, Node.js 22 e npm para desenvolver ou gerar o APK. Para o APK, é necessária uma conta Expo/EAS. |
+| Acesso remoto pelo celular | Projeto Firebase próprio com Firestore e Authentication, conta de usuário, configuração do app mobile e Maestro desktop aberto em um computador com internet. |
+
+Para ditar mensagens, é preciso autorizar o microfone. No Windows, a função usa o reconhecimento de fala do sistema, que precisa estar habilitado e conectado à internet. No Android, o reconhecimento de fala e as notificações exigem um APK instalado com os módulos nativos correspondentes.
+
+## Colocar o desktop para funcionar
+
+1. Instale o **JDK 21** e o **Codex CLI** no Windows. Autentique o CLI com uma conta que tenha acesso ao Codex.
+2. Clone este repositório ou baixe seu código. Abra um terminal na pasta que contém `run.cmd`.
+3. Configure `JAVA_HOME` para apontar para o JDK 21 se ele não estiver configurado. Execute:
+
+   ```
+   .\run.cmd
+   ```
+
+4. No Maestro, crie um projeto e selecione a pasta em que os agentes trabalharão. Em **Modelos**, confira a conexão do Codex. Se o executável não for encontrado, use **Localizar Codex CLI**.
+5. Crie ou edite seus agentes, escolha os modelos e comece uma conversa individual ou em grupo.
+
+Para gerar uma versão Windows com executável, configure `JAVA_HOME` e execute `.\package.cmd`. O programa será criado em `target/dist/Maestro-*/Maestro/Maestro.exe`. Mantenha toda a pasta `Maestro` junto ao executável. O script também atualiza um atalho existente na Área de Trabalho quando ele aponta para uma distribuição anterior criada pelo próprio projeto.
+
+## Colocar o Android para funcionar
+
+O código mobile fica na pasta irmã `maestro-mobile/`, em um projeto separado. Configure o Firebase antes de gerar o APK para acesso remoto:
+
+1. No **Firebase Console**, crie um projeto seu. Ative **Cloud Firestore** em modo de produção e **Authentication → Email/Password**. Crie o usuário que vai usar o Maestro e anote o **UID** dele.
+2. Registre um **app Web** no projeto Firebase. No projeto mobile, copie `src/firebaseConfig.example.ts` para `src/firebaseConfig.local.ts`, preencha os identificadores exibidos pelo Firebase e informe o UID em `ownerUid`. Não coloque senhas nesse arquivo.
+3. Copie [`firebase/firestore.rules.example`](firebase/firestore.rules.example) para `firebase/firestore.rules` neste repositório, substitua `COLOQUE_SEU_UID_AQUI` pelo UID criado e publique o conteúdo em **Firestore Database → Rules**. Mantenha as regras restritas ao seu usuário.
+4. Registre um **app Android** no mesmo projeto Firebase usando o identificador definido em `maestro-mobile/app.json`. Baixe `google-services.json` e coloque-o na raiz de `maestro-mobile/`.
+5. Abra o Maestro no Windows e acesse **Configurações → Celular e acesso remoto → Acesso de qualquer lugar**. Se necessário, selecione o arquivo `maestro-mobile/src/firebaseConfig.local.ts`. Entre com o usuário criado no Firebase e clique em **Verificar conexão**. Copie a **chave remota** exibida nessa tela.
+6. Na pasta `maestro-mobile`, instale as dependências e gere um APK:
+
+   ```
+   npm ci
+   npx.cmd eas-cli@latest login
+   npx.cmd eas-cli@latest build -p android --profile preview
+   ```
+
+7. Instale o APK no Android. No app, escolha **De qualquer lugar**, entre com o mesmo usuário Firebase e informe a chave remota do Maestro. Faça um teste enviando uma mensagem com o computador ligado e o Maestro aberto.
+
+Cada pessoa que for gerar seu próprio APK deve vincular `maestro-mobile/app.json` ao seu projeto Expo/EAS. Para receber **notificações push** no Android, configure também as credenciais **FCM v1** no EAS. O passo a passo completo está no README da pasta `maestro-mobile/`. Para testar as telas no Expo Go durante o desenvolvimento, use `npm run dev:tunnel`; o APK instalado funciona sem o servidor de desenvolvimento.
+
+Os arquivos `firebaseConfig.local.ts` e `google-services.json` ficam fora do Git. Guarde senhas, chaves remotas e chaves privadas de conta de serviço fora do repositório.
 
 ## Backups protegidos
 
-Em **Configurações → Armazenamento**, use **Exportar backup protegido** e crie uma senha de pelo menos 12 caracteres. O arquivo `.maestrobackup` contém um ZIP cifrado com AES-256-GCM; a senha não é guardada pelo aplicativo. O backup novo inclui `workspace.json` e os arquivos dos projetos, mas exclui sessões do Firebase, chaves de pareamento e acesso local, tokens de notificação e pedidos remotos temporários. Guarde a senha, pois não há recuperação automática.
+Em **Configurações → Armazenamento**, use **Exportar backup protegido** para criar um arquivo `.maestrobackup` cifrado e protegido por uma senha definida por você. O backup inclui os dados do projeto e exclui sessões e chaves de acesso remoto. Guarde a senha: o Maestro não a armazena nem consegue recuperá-la. O [guia de uso](docs/GUIA_USO.md) explica como proteger backups ZIP antigos e abrir um backup protegido.
 
-Para um backup ZIP criado por versões anteriores, use **Proteger ZIP antigo**. O Maestro gera uma cópia `.maestrobackup` sem apagar o ZIP original. Confira que a cópia abre com **Abrir backup protegido** antes de remover o ZIP antigo e suas outras cópias sem senha. Abrir um backup protegido gera um ZIP comum temporário que contém dados privados; remova-o depois do uso. A abertura não restaura dados automaticamente no aplicativo.
+## Mais informações
 
-## Documentação
-
-- [Arquitetura e direção de evolução](docs/ARQUITETURA.md)
-- [Guia detalhado de uso do desktop](docs/GUIA_USO.md)
-- `maestro-mobile/README.md`: configuração e instalação do aplicativo Android no repositório mobile.
-
-## Verificação
-
-No Windows, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1` compila e executa as verificações de fila, agendamento e backup. Antes de enviar alterações, execute `scripts/check-public-files.ps1` para conferir os arquivos do Git. O código do desktop está em [maestro-desktop](https://github.com/rcastelli1/maestro-desktop).
+- [Guia detalhado de uso](docs/GUIA_USO.md)
+- [Arquitetura do código](docs/ARQUITETURA.md)
+- O aplicativo Android tem um README próprio na pasta irmã `maestro-mobile/`.
