@@ -33,10 +33,9 @@ Para um backup ZIP criado por versões anteriores, use **Proteger ZIP antigo**. 
 ## Documentação
 
 - [Arquitetura e direção de evolução](docs/ARQUITETURA.md)
-- [Preparação para o GitHub e configurações privadas](docs/GITHUB.md)
 - [Guia detalhado de uso do desktop](docs/GUIA_USO.md)
 - `maestro-mobile/README.md`: configuração e instalação do aplicativo Android no repositório mobile.
 
 ## Verificação
 
-No Windows, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1` compila e executa as verificações de fila, agendamento e backup. O código do desktop está em [maestro-desktop](https://github.com/rcastelli1/maestro-desktop); consulte [docs/GITHUB.md](docs/GITHUB.md) antes de enviar alterações ou arquivos locais.
+No Windows, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1` compila e executa as verificações de fila, agendamento e backup. Antes de enviar alterações, execute `scripts/check-public-files.ps1` para conferir os arquivos do Git. O código do desktop está em [maestro-desktop](https://github.com/rcastelli1/maestro-desktop).
