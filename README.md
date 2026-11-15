@@ -39,4 +39,4 @@ Para um backup ZIP criado por versões anteriores, use **Proteger ZIP antigo**. 
 
 ## Verificação
 
-No Windows, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1` compila e executa as verificações de fila e agendamento. A publicação em GitHub ainda não foi feita; revise [docs/GITHUB.md](docs/GITHUB.md) antes de criar o primeiro commit.
+No Windows, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1` compila e executa as verificações de fila, agendamento e backup. O código do desktop está em [maestro-desktop](https://github.com/rcastelli1/maestro-desktop); consulte [docs/GITHUB.md](docs/GITHUB.md) antes de enviar alterações ou arquivos locais.
